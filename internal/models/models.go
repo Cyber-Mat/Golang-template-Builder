@@ -24,7 +24,7 @@ type Template struct {
 	CollectionID string    `json:"collection_id"`
 	Name         string    `json:"name"`
 	BlockTree    string    `json:"block_tree"` // JSON string
-	Rendered     string    `json:"rendered"`
+	Rendered     string    `json:"-"`
 	Revision     int       `json:"revision"`
 	CreatedBy    string    `json:"created_by"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -35,7 +35,7 @@ type TemplateRevision struct {
 	TemplateID string    `json:"template_id"`
 	Revision   int       `json:"revision"`
 	BlockTree  string    `json:"block_tree"`
-	Rendered   string    `json:"rendered"`
+	Rendered   string    `json:"-"`
 	CreatedBy  string    `json:"created_by"`
 	CreatedAt  time.Time `json:"created_at"`
 	Comment    string    `json:"comment"`

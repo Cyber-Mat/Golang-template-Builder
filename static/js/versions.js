@@ -1,6 +1,7 @@
 // versions.js — Version history UI & diffing
 
 import * as api from './api.js';
+import { generate } from './codegen.js';
 
 let currentTemplateId = null;
 let revisions = [];
@@ -121,9 +122,11 @@ async function showDiff(revA, revB) {
         leftLabel.textContent = `Revision ${revA}`;
         rightLabel.textContent = `Revision ${revB}`;
 
-        // Simple line-by-line diff with highlighting
-        const linesA = (a.rendered || '').split('\n');
-        const linesB = (b.rendered || '').split('\n');
+        // Regenerate template source from block_tree (single source of truth)
+        const treeA = typeof a.block_tree === 'string' ? JSON.parse(a.block_tree) : a.block_tree;
+        const treeB = typeof b.block_tree === 'string' ? JSON.parse(b.block_tree) : b.block_tree;
+        const linesA = generate(treeA).split('\n');
+        const linesB = generate(treeB).split('\n');
 
         leftPre.innerHTML = '';
         rightPre.innerHTML = '';
