@@ -6,9 +6,10 @@ import { getSubProperties } from './schema.js';
 let blockTree = { type: 'sequence', children: [] };
 let undoStack = [];
 let redoStack = [];
-let selectedBlockId = null;
+let selectedBlockIds = new Set();
 let onChangeCallback = null;
 let draggedBlockInfo = null; // { id, data } — set on dragstart, consumed on drop
+let clipboard = []; // copied/cut block data (JSON strings)
 
 // Public API
 export function initWorkspace(onChange) {
@@ -21,14 +22,28 @@ export function initWorkspace(onChange) {
     ws.addEventListener('dragleave', handleDragLeave);
     ws.addEventListener('drop', handleDrop);
 
-    // Keyboard
-    ws.addEventListener('keydown', handleKeyDown);
+    // Keyboard — attach to document so shortcuts work without workspace focus
+    document.addEventListener('keydown', handleKeyDown);
 
-    // Click to select/deselect
+    // Click to select/deselect (shift-click for multi-select)
     ws.addEventListener('click', (e) => {
+        // Don't interfere with inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
         const blockEl = e.target.closest('[data-block-id]');
         if (blockEl) {
-            selectBlock(blockEl.dataset.blockId);
+            const id = blockEl.dataset.blockId;
+            if (e.shiftKey) {
+                // Shift-click: toggle this block in/out of selection
+                if (selectedBlockIds.has(id)) {
+                    selectedBlockIds.delete(id);
+                } else {
+                    selectedBlockIds.add(id);
+                }
+                applySelectionVisuals();
+            } else {
+                // Normal click: single-select
+                selectBlock(id);
+            }
         } else {
             selectBlock(null);
         }
@@ -51,7 +66,7 @@ export function setBlockTree(tree) {
     resetIdCounter(maxId);
     undoStack = [];
     redoStack = [];
-    selectedBlockId = null;
+    selectedBlockIds.clear();
     render();
     notifyChange();
 }
@@ -92,36 +107,204 @@ function notifyChange() {
 }
 
 function selectBlock(id) {
-    selectedBlockId = id;
-    // Update visual selection
+    selectedBlockIds.clear();
+    if (id) selectedBlockIds.add(id);
+    applySelectionVisuals();
+}
+
+function applySelectionVisuals() {
     const ws = document.getElementById('workspace-blocks');
     ws.querySelectorAll('.block.selected').forEach(el => el.classList.remove('selected'));
-    if (id) {
+    for (const id of selectedBlockIds) {
         const el = ws.querySelector(`[data-block-id="${id}"]`);
         if (el) el.classList.add('selected');
     }
+    updateStatus();
 }
 
 // Keyboard handling
 function handleKeyDown(e) {
+    // Don't intercept when typing in inputs
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+    const ctrl = e.ctrlKey || e.metaKey;
+
+    // Delete / Backspace — delete selected blocks
     if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedBlockId) {
+        if (selectedBlockIds.size > 0) {
             e.preventDefault();
             pushUndo();
-            removeBlock(blockTree, selectedBlockId);
-            selectedBlockId = null;
+            for (const id of selectedBlockIds) {
+                removeBlock(blockTree, id);
+            }
+            selectedBlockIds.clear();
             render();
             notifyChange();
         }
+        return;
     }
-    if (e.ctrlKey && e.key === 'z') {
+
+    // Ctrl+Z — undo
+    if (ctrl && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
+        return;
     }
-    if (e.ctrlKey && e.key === 'y') {
+
+    // Ctrl+Shift+Z or Ctrl+Y — redo
+    if ((ctrl && e.key === 'y') || (ctrl && e.shiftKey && e.key === 'z') || (ctrl && e.shiftKey && e.key === 'Z')) {
         e.preventDefault();
         redo();
+        return;
     }
+
+    // Ctrl+A — select all top-level blocks
+    if (ctrl && e.key === 'a') {
+        e.preventDefault();
+        selectedBlockIds.clear();
+        for (const child of blockTree.children) {
+            if (child.id) selectedBlockIds.add(child.id);
+        }
+        applySelectionVisuals();
+        return;
+    }
+
+    // Ctrl+D — duplicate selected blocks
+    if (ctrl && e.key === 'd') {
+        e.preventDefault();
+        if (selectedBlockIds.size === 0) return;
+        pushUndo();
+        const duped = duplicateSelectedBlocks();
+        selectedBlockIds.clear();
+        for (const b of duped) selectedBlockIds.add(b.id);
+        render();
+        notifyChange();
+        return;
+    }
+
+    // Ctrl+C — copy selected blocks
+    if (ctrl && e.key === 'c') {
+        e.preventDefault();
+        copySelectedBlocks();
+        return;
+    }
+
+    // Ctrl+X — cut selected blocks
+    if (ctrl && e.key === 'x') {
+        e.preventDefault();
+        if (selectedBlockIds.size === 0) return;
+        copySelectedBlocks();
+        pushUndo();
+        for (const id of selectedBlockIds) {
+            removeBlock(blockTree, id);
+        }
+        selectedBlockIds.clear();
+        render();
+        notifyChange();
+        return;
+    }
+
+    // Ctrl+V — paste from clipboard
+    if (ctrl && e.key === 'v') {
+        e.preventDefault();
+        if (clipboard.length === 0) return;
+        pushUndo();
+        const pasted = [];
+        for (const json of clipboard) {
+            const block = reassignIds(JSON.parse(json));
+            blockTree.children.push(block);
+            pasted.push(block);
+        }
+        selectedBlockIds.clear();
+        for (const b of pasted) selectedBlockIds.add(b.id);
+        render();
+        notifyChange();
+        return;
+    }
+
+    // Escape — deselect all
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        selectBlock(null);
+        return;
+    }
+}
+
+// Find a block by ID in the tree
+function findBlock(tree, id) {
+    if (!tree) return null;
+    if (tree.id === id) return tree;
+    if (tree.children) {
+        for (const c of tree.children) {
+            const found = findBlock(c, id);
+            if (found) return found;
+        }
+    }
+    if (tree.body) { const f = findBlock(tree.body, id); if (f) return f; }
+    if (tree.else_body) { const f = findBlock(tree.else_body, id); if (f) return f; }
+    if (tree.condition) { const f = findBlock(tree.condition, id); if (f) return f; }
+    if (tree.source) { const f = findBlock(tree.source, id); if (f) return f; }
+    if (tree.args) { for (const a of tree.args) { if (a) { const f = findBlock(a, id); if (f) return f; } } }
+    if (tree.stages) { for (const s of tree.stages) { const f = findBlock(s, id); if (f) return f; } }
+    return null;
+}
+
+// Reassign all IDs in a block tree (for paste/duplicate)
+function reassignIds(block) {
+    if (!block) return block;
+    if (block.id) block.id = 'b' + (++_reassignCounter);
+    if (block.children) block.children.forEach(c => reassignIds(c));
+    if (block.body) reassignIds(block.body);
+    if (block.else_body) reassignIds(block.else_body);
+    if (block.condition) reassignIds(block.condition);
+    if (block.source) reassignIds(block.source);
+    if (block.args) block.args.forEach(a => { if (a) reassignIds(a); });
+    if (block.stages) block.stages.forEach(s => reassignIds(s));
+    return block;
+}
+let _reassignCounter = 10000;
+
+// Copy selected blocks to clipboard
+function copySelectedBlocks() {
+    clipboard = [];
+    // Maintain tree order: walk tree and collect selected blocks in order
+    collectInOrder(blockTree, selectedBlockIds, clipboard);
+}
+
+function collectInOrder(tree, ids, out) {
+    if (!tree) return;
+    if (tree.id && ids.has(tree.id)) {
+        out.push(JSON.stringify(tree));
+        return; // don't descend into selected block's children
+    }
+    if (tree.children) for (const c of tree.children) collectInOrder(c, ids, out);
+    if (tree.body) collectInOrder(tree.body, ids, out);
+    if (tree.else_body) collectInOrder(tree.else_body, ids, out);
+}
+
+// Duplicate selected blocks in place (insert copies right after originals)
+function duplicateSelectedBlocks() {
+    const duped = [];
+    duplicateInSequence(blockTree, selectedBlockIds, duped);
+    return duped;
+}
+
+function duplicateInSequence(tree, ids, duped) {
+    if (!tree) return;
+    if (tree.children) {
+        for (let i = tree.children.length - 1; i >= 0; i--) {
+            const child = tree.children[i];
+            if (child.id && ids.has(child.id)) {
+                const copy = reassignIds(JSON.parse(JSON.stringify(child)));
+                tree.children.splice(i + 1, 0, copy);
+                duped.push(copy);
+            } else {
+                duplicateInSequence(child, ids, duped);
+            }
+        }
+    }
+    if (tree.body) duplicateInSequence(tree.body, ids, duped);
+    if (tree.else_body) duplicateInSequence(tree.else_body, ids, duped);
 }
 
 // Remove block by ID from tree
@@ -213,6 +396,38 @@ function handleDrop(e) {
 
     const blockKey = e.dataTransfer.getData('application/x-block-key');
     const blockJSON = e.dataTransfer.getData('application/x-block-json');
+    const blocksJSON = e.dataTransfer.getData('application/x-blocks-json');
+
+    // Multi-block drop (shift-selected blocks being moved)
+    if (blocksJSON && draggedBlockInfo && draggedBlockInfo.multi) {
+        const blocks = JSON.parse(blocksJSON).map(s => JSON.parse(s));
+        pushUndo();
+        // Remove originals from tree
+        for (const id of draggedBlockInfo.ids) {
+            removeBlock(blockTree, id);
+        }
+        draggedBlockInfo = null;
+        // Insert at drop location
+        if (dropTarget && dropTarget.type === 'between') {
+            const parent = dropTarget.parentSeq;
+            // Recalculate index after removals
+            let idx = Math.min(dropTarget.index, parent.children.length);
+            for (const b of blocks) {
+                parent.children.splice(idx, 0, b);
+                idx++;
+            }
+        } else if (dropTarget && dropTarget.type === 'mouth') {
+            for (const b of blocks) dropTarget.seq.children.push(b);
+        } else {
+            for (const b of blocks) blockTree.children.push(b);
+        }
+        selectedBlockIds.clear();
+        for (const b of blocks) selectedBlockIds.add(b.id);
+        dropTarget = null;
+        render();
+        notifyChange();
+        return;
+    }
 
     let newBlock;
     if (blockKey) {
@@ -242,7 +457,7 @@ function handleDrop(e) {
 
     if (dropTarget.type === 'between') {
         const parent = dropTarget.parentSeq;
-        const idx = dropTarget.index;
+        const idx = Math.min(dropTarget.index, parent.children.length);
         parent.children.splice(idx, 0, newBlock);
     } else if (dropTarget.type === 'mouth') {
         const seq = dropTarget.seq;
@@ -340,6 +555,7 @@ export function render() {
         container.appendChild(el);
     }
 
+    applySelectionVisuals();
     updateStatus();
 }
 
@@ -995,23 +1211,33 @@ function createMouth(seq) {
 function addWorkspaceDrag(el, block) {
     el.addEventListener('dragstart', (e) => {
         e.stopPropagation();
-        e.dataTransfer.setData('application/x-block-json', JSON.stringify(block));
         e.dataTransfer.effectAllowed = 'move';
         el.classList.add('dragging');
 
-        // Store info — do NOT remove from tree yet (removed on successful drop)
-        draggedBlockInfo = { id: block.id, data: JSON.stringify(block) };
+        // If this block is part of a multi-selection, drag all selected blocks
+        if (selectedBlockIds.size > 1 && selectedBlockIds.has(block.id)) {
+            const blocks = [];
+            collectInOrder(blockTree, selectedBlockIds, blocks);
+            e.dataTransfer.setData('application/x-blocks-json', JSON.stringify(blocks));
+            draggedBlockInfo = { id: block.id, multi: true, ids: [...selectedBlockIds] };
+        } else {
+            e.dataTransfer.setData('application/x-block-json', JSON.stringify(block));
+            draggedBlockInfo = { id: block.id, data: JSON.stringify(block) };
+        }
     });
     el.addEventListener('dragend', () => {
         el.classList.remove('dragging');
-        // If still set, drop didn't happen — block stays where it was
         draggedBlockInfo = null;
     });
 }
 
 function updateStatus() {
     const count = countBlocks(blockTree);
-    document.getElementById('status-text').textContent = `${count} block${count !== 1 ? 's' : ''}`;
+    let text = `${count} block${count !== 1 ? 's' : ''}`;
+    if (selectedBlockIds.size > 0) {
+        text += ` · ${selectedBlockIds.size} selected`;
+    }
+    document.getElementById('status-text').textContent = text;
 }
 
 function countBlocks(block) {

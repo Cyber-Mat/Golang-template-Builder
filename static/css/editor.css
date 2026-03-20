@@ -426,6 +426,18 @@ select { cursor: pointer; min-width: 160px; }
     outline-offset: 1px;
 }
 
+/* Keyboard shortcuts hint icon */
+.shortcuts-hint {
+    cursor: help;
+    font-size: 14px;
+    opacity: 0.5;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.shortcuts-hint:hover {
+    opacity: 1;
+}
+
 /* === Right Panel === */
 #right-panel {
     width: 340px;
