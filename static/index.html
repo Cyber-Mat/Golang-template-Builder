@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoTmpl Editor</title>
+    <link rel="stylesheet" href="/css/editor.css">
+</head>
+<body>
+    <!-- Top bar -->
+    <header id="topbar">
+        <div class="topbar-left">
+            <h1 class="logo">GoTmpl Editor</h1>
+        </div>
+        <div class="topbar-center">
+            <select id="schema-select" title="Schema">
+                <option value="">— Select Schema —</option>
+            </select>
+            <select id="collection-select" title="Collection" disabled>
+                <option value="">— Select Collection —</option>
+            </select>
+            <select id="template-select" title="Template" disabled>
+                <option value="">— Select Template —</option>
+            </select>
+        </div>
+        <div class="topbar-right">
+            <button id="btn-save" class="btn btn-primary" disabled>Save</button>
+            <button id="btn-versions" class="btn" disabled>Versions</button>
+            <button id="btn-new-schema" class="btn" title="Upload Schema">+ Schema</button>
+            <button id="btn-new-collection" class="btn" disabled title="New Collection">+ Collection</button>
+            <button id="btn-new-template" class="btn" disabled title="New Template">+ Template</button>
+        </div>
+    </header>
+
+    <!-- Main three-panel layout -->
+    <main id="editor">
+        <!-- Left: Block Palette -->
+        <aside id="palette">
+            <div class="palette-search">
+                <input type="text" id="palette-search" placeholder="Search blocks…">
+            </div>
+            <div id="palette-categories"></div>
+        </aside>
+
+        <!-- Center: Workspace -->
+        <section id="workspace-container">
+            <div id="workspace" tabindex="0">
+                <div id="workspace-blocks"></div>
+                <div id="drop-indicator" class="drop-indicator hidden"></div>
+            </div>
+            <div id="workspace-status">
+                <span id="status-text">No template loaded</span>
+                <span id="undo-redo">
+                    <button id="btn-undo" class="btn-icon" title="Undo (Ctrl+Z)" disabled>↶</button>
+                    <button id="btn-redo" class="btn-icon" title="Redo (Ctrl+Y)" disabled>↷</button>
+                </span>
+            </div>
+        </section>
+
+        <!-- Right: Preview & Properties -->
+        <aside id="right-panel">
+            <div class="panel-tabs">
+                <button class="panel-tab active" data-panel="preview">Preview</button>
+                <button class="panel-tab" data-panel="render">Render</button>
+                <button class="panel-tab" data-panel="fixtures">Fixtures</button>
+            </div>
+
+            <!-- Preview tab: generated template source -->
+            <div id="panel-preview" class="panel-content active">
+                <pre id="preview-source"><code></code></pre>
+                <div id="preview-validation" class="validation-msg"></div>
+            </div>
+
+            <!-- Render tab: test render with fixture -->
+            <div id="panel-render" class="panel-content">
+                <div class="render-controls">
+                    <select id="render-fixture-select">
+                        <option value="">— Select Fixture —</option>
+                    </select>
+                    <button id="btn-render" class="btn btn-primary">Test Render</button>
+                    <button id="btn-push" class="btn">Push (stub)</button>
+                </div>
+                <pre id="render-output"></pre>
+            </div>
+
+            <!-- Fixtures tab: manage test fixtures -->
+            <div id="panel-fixtures" class="panel-content">
+                <div class="fixture-controls">
+                    <button id="btn-new-fixture" class="btn">+ Fixture</button>
+                </div>
+                <div id="fixture-list"></div>
+                <div id="fixture-editor" class="hidden">
+                    <input type="text" id="fixture-name" placeholder="Fixture name">
+                    <textarea id="fixture-data" rows="12" placeholder='{"key": "value"}'></textarea>
+                    <div class="fixture-actions">
+                        <button id="btn-save-fixture" class="btn btn-primary">Save</button>
+                        <button id="btn-cancel-fixture" class="btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Version History Modal -->
+    <div id="version-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Version History</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="version-list" class="version-list"></div>
+                <div id="version-diff" class="version-diff">
+                    <div class="diff-header">
+                        <span id="diff-left-label"></span>
+                        <span id="diff-right-label"></span>
+                    </div>
+                    <div class="diff-panels">
+                        <pre id="diff-left"></pre>
+                        <pre id="diff-right"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schema Upload Modal -->
+    <div id="schema-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>Upload Schema</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>Name <input type="text" id="schema-name"></label>
+                <label>Version <input type="text" id="schema-version" placeholder="1.0.0"></label>
+                <label>JSON Schema
+                    <textarea id="schema-json" rows="12" placeholder="Paste JSON Schema here…"></textarea>
+                </label>
+                <button id="btn-save-schema" class="btn btn-primary">Save Schema</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Collection Modal -->
+    <div id="collection-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>New Collection</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>Name <input type="text" id="collection-name"></label>
+                <label>Description <input type="text" id="collection-description"></label>
+                <button id="btn-save-collection" class="btn btn-primary">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Template Modal -->
+    <div id="template-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>New Template</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label>Name <input type="text" id="template-name"></label>
+                <button id="btn-save-template" class="btn btn-primary">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+functions:
+  - name: lookupUser
+    description: "Fetch user display name by ID"
+    args:
+      - name: userID
+        type: string
+    returns: string
+    category: lookup
+    block:
+      shape: reporter
+      color: "#4CAF50"
+
+  - name: formatDate
+    description: "Format a date string"
+    args:
+      - name: date
+        type: string
+      - name: layout
+        type: string
+    returns: string
+    category: formatting
+    block:
+      shape: reporter
+      color: "#4CAF50"
