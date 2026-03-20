@@ -8,6 +8,8 @@
     --color-builtins: #00897B;
     --color-pipeline: #0097A7;
     --color-literals: #607D8B;
+    --color-html: #E91E63;
+    --color-confluence: #FF6F00;
 
     --bg: #1e1e2e;
     --bg-panel: #252536;
@@ -366,6 +368,8 @@ select { cursor: pointer; min-width: 160px; }
 .block-builtins { background: var(--color-builtins); }
 .block-pipeline { background: var(--color-pipeline); }
 .block-literals { background: var(--color-literals); }
+.block-html { background: var(--color-html); }
+.block-confluence { background: var(--color-confluence); }
 
 /* === Workspace (center) === */
 #workspace-container {

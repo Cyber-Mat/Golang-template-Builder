@@ -78,6 +78,35 @@ function genBlock(b) {
             return `{{${stages.join(' | ')}}}`;
         }
 
+        case 'html-wrapper': {
+            let out = `<${b.tag || 'div'}`;
+            if (b.attrs) out += ' ' + b.attrs;
+            out += '>';
+            if (b.body) out += genBlock(b.body);
+            out += `</${b.tag || 'div'}>`;
+            return out;
+        }
+
+        case 'confluence-macro': {
+            let out = `<ac:structured-macro ac:name="${b.macroName || 'code'}">`;
+            if (b.params) {
+                for (const param of b.params.split(/\s+/)) {
+                    const eq = param.indexOf('=');
+                    if (eq > 0) {
+                        const k = param.slice(0, eq);
+                        const v = param.slice(eq + 1);
+                        out += `<ac:parameter ac:name="${k}">${v}</ac:parameter>`;
+                    }
+                }
+            }
+            const bodyTag = b.bodyTag || 'ac:plain-text-body';
+            out += `<${bodyTag}>`;
+            if (b.body) out += genBlock(b.body);
+            out += `</${bodyTag}>`;
+            out += '</ac:structured-macro>';
+            return out;
+        }
+
         default:
             // Reporter block used as a statement
             return `{{${genExpr(b)}}}`;

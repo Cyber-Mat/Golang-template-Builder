@@ -30,6 +30,12 @@ type block struct {
 	Children []block `json:"children,omitempty"`
 	// For pipeline
 	Stages []block `json:"stages,omitempty"`
+	// For HTML/Confluence wrappers
+	Tag       string `json:"tag,omitempty"`
+	Attrs     string `json:"attrs,omitempty"`
+	MacroName string `json:"macroName,omitempty"`
+	BodyTag   string `json:"bodyTag,omitempty"`
+	Params    string `json:"params,omitempty"`
 }
 
 // Generate converts a block tree JSON string to a Go template source string.
@@ -148,6 +154,62 @@ func genBlock(sb *strings.Builder, b *block) error {
 				return err
 			}
 		}
+	case "html-wrapper":
+		tag := b.Tag
+		if tag == "" {
+			tag = "div"
+		}
+		sb.WriteString("<")
+		sb.WriteString(tag)
+		if b.Attrs != "" {
+			sb.WriteString(" ")
+			sb.WriteString(b.Attrs)
+		}
+		sb.WriteString(">")
+		if b.Body != nil {
+			if err := genBlock(sb, b.Body); err != nil {
+				return err
+			}
+		}
+		sb.WriteString("</")
+		sb.WriteString(tag)
+		sb.WriteString(">")
+	case "confluence-macro":
+		macroName := b.MacroName
+		if macroName == "" {
+			macroName = "code"
+		}
+		sb.WriteString(`<ac:structured-macro ac:name="`)
+		sb.WriteString(macroName)
+		sb.WriteString(`">`)
+		if b.Params != "" {
+			for _, param := range strings.Fields(b.Params) {
+				eq := strings.Index(param, "=")
+				if eq > 0 {
+					sb.WriteString(`<ac:parameter ac:name="`)
+					sb.WriteString(param[:eq])
+					sb.WriteString(`">`)
+					sb.WriteString(param[eq+1:])
+					sb.WriteString(`</ac:parameter>`)
+				}
+			}
+		}
+		bodyTag := b.BodyTag
+		if bodyTag == "" {
+			bodyTag = "ac:plain-text-body"
+		}
+		sb.WriteString("<")
+		sb.WriteString(bodyTag)
+		sb.WriteString(">")
+		if b.Body != nil {
+			if err := genBlock(sb, b.Body); err != nil {
+				return err
+			}
+		}
+		sb.WriteString("</")
+		sb.WriteString(bodyTag)
+		sb.WriteString(">")
+		sb.WriteString("</ac:structured-macro>")
 	default:
 		// Treat as expression (reporter block inside a stack context)
 		sb.WriteString("{{")

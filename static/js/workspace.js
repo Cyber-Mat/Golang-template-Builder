@@ -359,6 +359,8 @@ function renderBlock(block) {
         case 'function': return renderFunctionBlock(block);
         case 'literal': return renderLiteralBlock(block);
         case 'pipeline': return renderPipelineBlock(block);
+        case 'html-wrapper': return renderHtmlWrapperBlock(block);
+        case 'confluence-macro': return renderConfluenceMacroBlock(block);
         default:
             const el = document.createElement('div');
             el.className = 'block block-stack block-text';
@@ -653,6 +655,93 @@ function renderTemplateBlock(block) {
 
     const srcSlot = createSlot(block.source, (val) => { pushUndo(); block.source = val; render(); notifyChange(); });
     el.appendChild(srcSlot);
+
+    addWorkspaceDrag(el, block);
+    return el;
+}
+
+function renderHtmlWrapperBlock(block) {
+    const el = document.createElement('div');
+    el.className = 'block block-c block-html';
+    el.dataset.blockId = block.id;
+    el.draggable = true;
+
+    const header = document.createElement('div');
+    header.className = 'block-header';
+
+    const openTag = document.createElement('span');
+    openTag.textContent = `<${block.tag || 'div'}`;
+    header.appendChild(openTag);
+
+    const attrsInput = document.createElement('input');
+    attrsInput.type = 'text';
+    attrsInput.className = 'block-input';
+    attrsInput.value = block.attrs || '';
+    attrsInput.placeholder = 'class="..." id="..."';
+    attrsInput.style.width = Math.max(80, (block.attrs || '').length * 8 + 20) + 'px';
+    attrsInput.addEventListener('input', (e) => {
+        pushUndo();
+        block.attrs = e.target.value;
+        attrsInput.style.width = Math.max(80, e.target.value.length * 8 + 20) + 'px';
+        notifyChange();
+    });
+    attrsInput.addEventListener('mousedown', (e) => e.stopPropagation());
+    attrsInput.addEventListener('click', (e) => e.stopPropagation());
+    header.appendChild(attrsInput);
+
+    header.appendChild(document.createTextNode('>'));
+    el.appendChild(header);
+
+    if (!block.body) block.body = { type: 'sequence', children: [] };
+    el.appendChild(createMouth(block.body));
+
+    const footer = document.createElement('div');
+    footer.className = 'block-footer';
+    footer.textContent = `</${block.tag || 'div'}>`;
+    el.appendChild(footer);
+
+    addWorkspaceDrag(el, block);
+    return el;
+}
+
+function renderConfluenceMacroBlock(block) {
+    const el = document.createElement('div');
+    el.className = 'block block-c block-confluence';
+    el.dataset.blockId = block.id;
+    el.draggable = true;
+
+    const header = document.createElement('div');
+    header.className = 'block-header';
+
+    const label = document.createElement('span');
+    label.textContent = `ac:${block.macroName || 'code'} `;
+    header.appendChild(label);
+
+    const paramsInput = document.createElement('input');
+    paramsInput.type = 'text';
+    paramsInput.className = 'block-input';
+    paramsInput.value = block.params || '';
+    paramsInput.placeholder = 'language=go title=...';
+    paramsInput.style.width = Math.max(100, (block.params || '').length * 8 + 20) + 'px';
+    paramsInput.addEventListener('input', (e) => {
+        pushUndo();
+        block.params = e.target.value;
+        paramsInput.style.width = Math.max(100, e.target.value.length * 8 + 20) + 'px';
+        notifyChange();
+    });
+    paramsInput.addEventListener('mousedown', (e) => e.stopPropagation());
+    paramsInput.addEventListener('click', (e) => e.stopPropagation());
+    header.appendChild(paramsInput);
+
+    el.appendChild(header);
+
+    if (!block.body) block.body = { type: 'sequence', children: [] };
+    el.appendChild(createMouth(block.body));
+
+    const footer = document.createElement('div');
+    footer.className = 'block-footer';
+    footer.textContent = `end ac:${block.macroName || 'code'}`;
+    el.appendChild(footer);
 
     addWorkspaceDrag(el, block);
     return el;

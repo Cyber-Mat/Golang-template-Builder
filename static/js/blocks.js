@@ -127,6 +127,35 @@ export const BLOCK_DEFS = {
         slots: [],
         defaults: { datatype: 'bool', value: 'true' },
     },
+    // HTML wrappers
+    html_div: { type: 'html-wrapper', category: 'html', label: '<div>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'div', attrs: '' } },
+    html_span: { type: 'html-wrapper', category: 'html', label: '<span>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'span', attrs: '' } },
+    html_p: { type: 'html-wrapper', category: 'html', label: '<p>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'p', attrs: '' } },
+    html_a: { type: 'html-wrapper', category: 'html', label: '<a>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'a', attrs: 'href=""' } },
+    html_h1: { type: 'html-wrapper', category: 'html', label: '<h1>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'h1', attrs: '' } },
+    html_h2: { type: 'html-wrapper', category: 'html', label: '<h2>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'h2', attrs: '' } },
+    html_h3: { type: 'html-wrapper', category: 'html', label: '<h3>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'h3', attrs: '' } },
+    html_h4: { type: 'html-wrapper', category: 'html', label: '<h4>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'h4', attrs: '' } },
+    html_h5: { type: 'html-wrapper', category: 'html', label: '<h5>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'h5', attrs: '' } },
+    html_h6: { type: 'html-wrapper', category: 'html', label: '<h6>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'h6', attrs: '' } },
+    html_ul: { type: 'html-wrapper', category: 'html', label: '<ul>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'ul', attrs: '' } },
+    html_ol: { type: 'html-wrapper', category: 'html', label: '<ol>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'ol', attrs: '' } },
+    html_li: { type: 'html-wrapper', category: 'html', label: '<li>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'li', attrs: '' } },
+    html_table: { type: 'html-wrapper', category: 'html', label: '<table>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'table', attrs: '' } },
+    html_tr: { type: 'html-wrapper', category: 'html', label: '<tr>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'tr', attrs: '' } },
+    html_td: { type: 'html-wrapper', category: 'html', label: '<td>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'td', attrs: '' } },
+    html_th: { type: 'html-wrapper', category: 'html', label: '<th>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'th', attrs: '' } },
+    html_strong: { type: 'html-wrapper', category: 'html', label: '<strong>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'strong', attrs: '' } },
+    html_em: { type: 'html-wrapper', category: 'html', label: '<em>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'em', attrs: '' } },
+    html_code: { type: 'html-wrapper', category: 'html', label: '<code>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'code', attrs: '' } },
+    html_pre: { type: 'html-wrapper', category: 'html', label: '<pre>', shape: 'c-block', color: 'html', slots: [], defaults: { tag: 'pre', attrs: '' } },
+    // Confluence macros
+    confluence_code: { type: 'confluence-macro', category: 'confluence', label: 'code', shape: 'c-block', color: 'confluence', slots: [], defaults: { macroName: 'code', bodyTag: 'ac:plain-text-body', params: '' } },
+    confluence_info: { type: 'confluence-macro', category: 'confluence', label: 'info', shape: 'c-block', color: 'confluence', slots: [], defaults: { macroName: 'info', bodyTag: 'ac:rich-text-body', params: '' } },
+    confluence_note: { type: 'confluence-macro', category: 'confluence', label: 'note', shape: 'c-block', color: 'confluence', slots: [], defaults: { macroName: 'note', bodyTag: 'ac:rich-text-body', params: '' } },
+    confluence_warning: { type: 'confluence-macro', category: 'confluence', label: 'warning', shape: 'c-block', color: 'confluence', slots: [], defaults: { macroName: 'warning', bodyTag: 'ac:rich-text-body', params: '' } },
+    confluence_tip: { type: 'confluence-macro', category: 'confluence', label: 'tip', shape: 'c-block', color: 'confluence', slots: [], defaults: { macroName: 'tip', bodyTag: 'ac:rich-text-body', params: '' } },
+    confluence_expand: { type: 'confluence-macro', category: 'confluence', label: 'expand', shape: 'c-block', color: 'confluence', slots: [], defaults: { macroName: 'expand', bodyTag: 'ac:rich-text-body', params: 'title=Details' } },
 };
 
 // Category metadata
@@ -139,6 +168,8 @@ export const CATEGORIES = [
     { id: 'builtins', label: 'Builtins', color: '#00897B' },
     { id: 'pipeline', label: 'Pipeline', color: '#0097A7' },
     { id: 'literals', label: 'Literals', color: '#607D8B' },
+    { id: 'html', label: 'HTML', color: '#E91E63' },
+    { id: 'confluence', label: 'Confluence', color: '#FF6F00' },
 ];
 
 // Registry: maps defKey → definition. Includes dynamic (schema/funcmap) blocks.
@@ -180,7 +211,7 @@ export function createBlock(defKeyOrType, config = {}) {
         ...config,
     };
     // Ensure children/body exist for c-blocks
-    if (block.type === 'if' || block.type === 'range' || block.type === 'with' || block.type === 'define') {
+    if (block.type === 'if' || block.type === 'range' || block.type === 'with' || block.type === 'define' || block.type === 'html-wrapper' || block.type === 'confluence-macro') {
         if (!block.body) {
             block.body = { type: 'sequence', children: [] };
         }
