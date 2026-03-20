@@ -2,7 +2,7 @@
 
 import * as api from './api.js';
 import { initRegistry, blockTreeFromJSON, blockTreeToJSON } from './blocks.js';
-import { parseSchema, registerSchemaBlocks, registerFuncMapBlocks } from './schema.js';
+import { parseSchema, registerSchemaBlocks, registerFuncMapBlocks, clearSchemaPaths } from './schema.js';
 import { initPalette, renderPalette } from './palette.js';
 import { initWorkspace, setBlockTree, getBlockTree } from './workspace.js';
 import { updatePreview, initPreview, loadFixturesIntoSelect } from './preview.js';
@@ -110,6 +110,7 @@ async function onSchemaChange(e) {
         colSelect.innerHTML = '<option value="">— Select Collection —</option>';
         tmplSelect.innerHTML = '<option value="">— Select Template —</option>';
         // Reset palette to remove schema-specific blocks
+        clearSchemaPaths();
         initRegistry();
         try {
             const fmConfig = await api.getFuncMap();

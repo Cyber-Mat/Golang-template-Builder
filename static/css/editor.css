@@ -224,6 +224,7 @@ select { cursor: pointer; min-width: 160px; }
 .block-c .block-header {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 4px;
     padding: 5px 10px;
     border-radius: var(--radius-sm) var(--radius-sm) 0 0;
@@ -332,7 +333,7 @@ select { cursor: pointer; min-width: 160px; }
 .block-var-chip {
     font-size: 11px;
     padding: 2px 8px;
-    margin-left: 6px;
+    margin: 2px 0 2px 4px;
     cursor: grab;
     border: 1px dashed rgba(255,255,255,0.4);
     user-select: none;

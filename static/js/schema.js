@@ -2,6 +2,26 @@
 
 import { registerBlock } from './blocks.js';
 
+let _schemaPaths = [];
+
+export function clearSchemaPaths() { _schemaPaths = []; }
+
+/**
+ * Given a range source path like ".Sections", return sub-property suffixes
+ * for array item properties. E.g., [".Heading", ".Body", ".Order"]
+ * Returns empty array for simple arrays or unknown paths.
+ */
+export function getSubProperties(sourcePath) {
+    const prefix = sourcePath + '[].';
+    const suffixes = [];
+    for (const { path } of _schemaPaths) {
+        if (path.startsWith(prefix)) {
+            suffixes.push(path.slice(sourcePath.length + 2)); // skip "[]", keep ".Heading"
+        }
+    }
+    return suffixes;
+}
+
 /**
  * Parse a JSON Schema and return a flat list of dot-paths with types.
  * E.g., { properties: { Name: { type: "string" } } } → [{ path: ".Name", type: "string" }]
@@ -71,6 +91,7 @@ function walkSchema(schema, prefix, paths, seen) {
  * Called when a schema is loaded/changed.
  */
 export function registerSchemaBlocks(schemaPaths) {
+    _schemaPaths = schemaPaths;
     for (const { path, type } of schemaPaths) {
         const key = `value_${path}`;
         registerBlock(key, {

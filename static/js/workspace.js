@@ -1,6 +1,7 @@
 // workspace.js — Drag-drop canvas (center panel)
 
 import { createBlock, findMaxId, resetIdCounter } from './blocks.js';
+import { getSubProperties } from './schema.js';
 
 let blockTree = { type: 'sequence', children: [] };
 let undoStack = [];
@@ -518,11 +519,40 @@ function renderRangeBlock(block) {
     varChip.addEventListener('mousedown', (e) => e.stopPropagation());
     if (varName) header.appendChild(varChip);
 
+    // Sub-property chips for array-of-objects (e.g., $section.Heading, $section.Body)
+    const subChipEls = [];
+    const sourcePath = block.source?.path;
+    if (sourcePath) {
+        const subProps = getSubProperties(sourcePath);
+        for (const suffix of subProps) {
+            const subChip = document.createElement('span');
+            subChip.className = 'block-var-chip block-reporter block-values';
+            subChip.textContent = (block.variable || '$item') + suffix;
+            subChip.title = `Drag to use ${(block.variable || '$item') + suffix}`;
+            subChip.draggable = true;
+            subChip.addEventListener('dragstart', (e) => {
+                e.stopPropagation();
+                const newBlock = createBlock('value', { path: (block.variable || '$item') + suffix });
+                e.dataTransfer.setData('application/x-block-json', JSON.stringify(newBlock));
+                e.dataTransfer.effectAllowed = 'copy';
+                subChip.classList.add('dragging');
+            });
+            subChip.addEventListener('dragend', () => subChip.classList.remove('dragging'));
+            subChip.addEventListener('mousedown', (e) => e.stopPropagation());
+            header.appendChild(subChip);
+            subChipEls.push({ el: subChip, suffix });
+        }
+    }
+
     // Keep chip text in sync with variable input
     varInput.addEventListener('input', () => {
         const v = block.variable || '$item';
         varChip.textContent = v;
         varChip.title = `Drag to use ${v}`;
+        for (const { el: chip, suffix } of subChipEls) {
+            chip.textContent = v + suffix;
+            chip.title = `Drag to use ${v + suffix}`;
+        }
     });
 
     el.appendChild(header);
