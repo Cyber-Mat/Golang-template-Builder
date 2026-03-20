@@ -181,7 +181,7 @@ select { cursor: pointer; min-width: 160px; }
 /* Stack blocks: flat top/bottom with notch */
 .block-stack {
     display: flex;
-    width: 100%;
+    width: fit-content;
     border-radius: var(--radius-sm);
 }
 .block-stack::before {
@@ -216,7 +216,8 @@ select { cursor: pointer; min-width: 160px; }
 .block-c {
     display: flex;
     flex-direction: column;
-    width: 100%;
+    width: fit-content;
+    min-width: 180px;
     border-radius: var(--radius-sm);
     padding: 0;
 }
@@ -238,19 +239,23 @@ select { cursor: pointer; min-width: 160px; }
     border-radius: 0 0 3px 3px;
 }
 .block-c .block-mouth {
-    min-height: 32px;
+    min-height: 48px;
     margin: 0 4px 0 20px;
-    padding: 4px;
+    padding: 8px;
     background: var(--bg-workspace);
     border-radius: var(--radius-sm);
-    border: 2px dashed rgba(255,255,255,0.15);
+    border: 2px dashed rgba(255,255,255,0.3);
+    border-left: 4px solid rgba(255,255,255,0.4);
 }
 .block-c .block-mouth.drop-active {
     border-color: var(--accent);
-    background: rgba(74, 144, 217, 0.1);
+    border-left-width: 4px;
+    background: rgba(74, 144, 217, 0.2);
+    box-shadow: inset 0 0 8px rgba(74, 144, 217, 0.15);
 }
 .block-c .block-footer {
-    padding: 3px 10px;
+    padding: 5px 10px;
+    min-height: 20px;
     font-size: 11px;
     color: rgba(255,255,255,0.7);
     border-radius: 0 0 var(--radius-sm) var(--radius-sm);
@@ -274,12 +279,19 @@ select { cursor: pointer; min-width: 160px; }
     color: rgba(255,255,255,0.8);
 }
 .block-c .block-else-mouth {
-    min-height: 32px;
+    min-height: 48px;
     margin: 0 4px 0 20px;
-    padding: 4px;
+    padding: 8px;
     background: var(--bg-workspace);
     border-radius: var(--radius-sm);
-    border: 2px dashed rgba(255,255,255,0.15);
+    border: 2px dashed rgba(255,255,255,0.3);
+    border-left: 4px solid rgba(255,255,255,0.4);
+}
+.block-c .block-else-mouth.drop-active {
+    border-color: var(--accent);
+    border-left-width: 4px;
+    background: rgba(74, 144, 217, 0.2);
+    box-shadow: inset 0 0 8px rgba(74, 144, 217, 0.15);
 }
 
 /* Block slots (for reporter blocks inside stack/c-blocks) */
@@ -350,6 +362,7 @@ select { cursor: pointer; min-width: 160px; }
     display: flex;
     flex-direction: column;
     gap: 2px;
+    align-items: flex-start;
 }
 #workspace-status {
     display: flex;

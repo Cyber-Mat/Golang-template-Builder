@@ -7,6 +7,7 @@ let undoStack = [];
 let redoStack = [];
 let selectedBlockId = null;
 let onChangeCallback = null;
+let draggedBlockInfo = null; // { id, data } — set on dragstart, consumed on drop
 
 // Public API
 export function initWorkspace(onChange) {
@@ -217,21 +218,26 @@ function handleDrop(e) {
         newBlock = createBlock(blockKey);
     } else if (blockJSON) {
         newBlock = JSON.parse(blockJSON);
-        // Re-ID to avoid duplicates when moving
     } else {
         return;
     }
 
+    // Single undo snapshot before any mutations
+    pushUndo();
+
+    // If this is an internal move (rearranging), remove original from tree
+    if (draggedBlockInfo && newBlock.id === draggedBlockInfo.id) {
+        removeBlock(blockTree, draggedBlockInfo.id);
+        draggedBlockInfo = null;
+    }
+
     if (!dropTarget) {
         // Default: append to root
-        pushUndo();
         blockTree.children.push(newBlock);
         render();
         notifyChange();
         return;
     }
-
-    pushUndo();
 
     if (dropTarget.type === 'between') {
         const parent = dropTarget.parentSeq;
@@ -803,6 +809,12 @@ function createSlot(currentBlock, setter) {
             newBlock = JSON.parse(blockJSON);
         }
         if (newBlock) {
+            pushUndo();
+            // If internal move, remove original first
+            if (draggedBlockInfo && newBlock.id === draggedBlockInfo.id) {
+                removeBlock(blockTree, draggedBlockInfo.id);
+                draggedBlockInfo = null;
+            }
             setter(newBlock);
         }
     });
@@ -833,15 +845,13 @@ function addWorkspaceDrag(el, block) {
         e.dataTransfer.effectAllowed = 'move';
         el.classList.add('dragging');
 
-        // Remove from tree on drag start
-        setTimeout(() => {
-            pushUndo();
-            removeBlock(blockTree, block.id);
-            render();
-        }, 0);
+        // Store info — do NOT remove from tree yet (removed on successful drop)
+        draggedBlockInfo = { id: block.id, data: JSON.stringify(block) };
     });
     el.addEventListener('dragend', () => {
         el.classList.remove('dragging');
+        // If still set, drop didn't happen — block stays where it was
+        draggedBlockInfo = null;
     });
 }
 
