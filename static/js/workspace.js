@@ -499,6 +499,32 @@ function renderRangeBlock(block) {
     // Source slot
     const srcSlot = createSlot(block.source, (val) => { pushUndo(); block.source = val; render(); notifyChange(); });
     header.appendChild(srcSlot);
+
+    // Draggable variable chip — drag into range body to create a value block for the variable
+    const varChip = document.createElement('span');
+    varChip.className = 'block-var-chip block-reporter block-values';
+    const varName = block.variable || '$item';
+    varChip.textContent = varName;
+    varChip.title = `Drag to use ${varName}`;
+    varChip.draggable = true;
+    varChip.addEventListener('dragstart', (e) => {
+        e.stopPropagation();
+        const newBlock = createBlock('value', { path: block.variable || '$item' });
+        e.dataTransfer.setData('application/x-block-json', JSON.stringify(newBlock));
+        e.dataTransfer.effectAllowed = 'copy';
+        varChip.classList.add('dragging');
+    });
+    varChip.addEventListener('dragend', () => varChip.classList.remove('dragging'));
+    varChip.addEventListener('mousedown', (e) => e.stopPropagation());
+    if (varName) header.appendChild(varChip);
+
+    // Keep chip text in sync with variable input
+    varInput.addEventListener('input', () => {
+        const v = block.variable || '$item';
+        varChip.textContent = v;
+        varChip.title = `Drag to use ${v}`;
+    });
+
     el.appendChild(header);
 
     if (!block.body) block.body = { type: 'sequence', children: [] };
