@@ -380,15 +380,15 @@ function renderTextBlock(block) {
     label.textContent = 'text ';
     el.appendChild(label);
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'block-input';
+    const input = document.createElement('textarea');
+    input.className = 'block-input block-textarea';
     input.value = block.value || '';
-    input.style.width = Math.max(60, (block.value || '').length * 8 + 20) + 'px';
+    input.rows = 1;
+    autoSizeTextarea(input);
     input.addEventListener('input', (e) => {
         pushUndo();
         block.value = e.target.value;
-        input.style.width = Math.max(60, e.target.value.length * 8 + 20) + 'px';
+        autoSizeTextarea(input);
         notifyChange();
     });
     input.addEventListener('mousedown', (e) => e.stopPropagation());
@@ -828,6 +828,15 @@ function renderPipelineBlock(block) {
 
     addWorkspaceDrag(el, block);
     return el;
+}
+
+// Helper: auto-size a textarea to fit its content
+function autoSizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+    const lines = el.value.split('\n');
+    const maxLen = Math.max(...lines.map(l => l.length), 6);
+    el.style.width = Math.max(60, maxLen * 8 + 20) + 'px';
 }
 
 // Helper: create a slot element that accepts a reporter block
