@@ -22,3 +22,16 @@ functions:
     block:
       shape: reporter
       color: "#4CAF50"
+
+  - name: sortBy
+    description: "Sort a slice by a struct field name"
+    args:
+      - name: items
+        type: any
+      - name: field
+        type: string
+    returns: any
+    category: list
+    block:
+      shape: reporter
+      color: "#4CAF50"
