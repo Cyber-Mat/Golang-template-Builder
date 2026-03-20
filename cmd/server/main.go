@@ -25,6 +25,13 @@ func main() {
 	}
 	log.Println("Database migrations complete")
 
+	// Seed default data if DB is empty
+	if err := db.SeedDefaults(database); err != nil {
+		log.Printf("Warning: failed to seed defaults: %v", err)
+	} else {
+		log.Println("Default data ready")
+	}
+
 	// Load FuncMap config
 	fmcPath := envOr("FUNCMAP_CONFIG", "funcmap_config.yaml")
 	fmConfig, err := funcmap.Load(fmcPath)
